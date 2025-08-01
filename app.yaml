@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: timelapse-generator
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timelapse-generator
+  namespace: timelapse-generator
+  labels:
+    app: timelapse-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: timelapse-generator
+  template:
+    metadata:
+      labels:
+        app: timelapse-generator
+    spec:
+      containers:
+      - name: timelapse-generator
+        image: timelapse-generator:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: nfs-share
+          mountPath: /mnt/nfs_share
+          readOnly: false
+        - name: tmp-storage
+          mountPath: /tmp
+        livenessProbe:
+          httpGet:
+            path: /api/system/info
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/system/info
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: nfs-share
+        persistentVolumeClaim:
+          claimName: nfs-share-pvc
+      - name: tmp-storage
+        emptyDir:
+          sizeLimit: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: timelapse-generator-service
+  namespace: timelapse-generator
+  labels:
+    app: timelapse-generator
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: timelapse-generator
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: timelapse-generator-ingress
+  namespace: timelapse-generator
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  rules:
+  - host: timelapse-generator.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: timelapse-generator-service
+            port:
+              number: 80
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-share-pvc
+  namespace: timelapse-generator
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: nfs-storage 

@@ -1,0 +1,17 @@
+apiVersion: v2
+name: timelapse-generator
+description: A TrueNAS-compatible timelapse generator application
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - timelapse
+  - video
+  - ffmpeg
+  - truenas
+home: https://github.com/your-repo/timelapse-generator
+sources:
+  - https://github.com/your-repo/timelapse-generator
+maintainers:
+  - name: Your Name
+    email: your.email@example.com 

@@ -1,0 +1,84 @@
+# Default values for timelapse-generator
+replicaCount: 1
+
+image:
+  repository: timelapse-generator
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  hosts:
+    - host: timelapse-generator.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+persistence:
+  enabled: true
+  storageClass: "nfs-storage"
+  accessMode: ReadWriteMany
+  size: 10Gi
+  mountPath: /mnt/nfs_share
+
+tmpStorage:
+  enabled: true
+  size: 1Gi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+env:
+  - name: PYTHONUNBUFFERED
+    value: "1"
+
+livenessProbe:
+  httpGet:
+    path: /api/system/info
+    port: 8000
+  initialDelaySeconds: 30
+  periodSeconds: 30
+
+readinessProbe:
+  httpGet:
+    path: /api/system/info
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 10 
